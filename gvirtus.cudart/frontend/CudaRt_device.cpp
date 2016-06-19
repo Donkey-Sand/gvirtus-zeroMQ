@@ -54,23 +54,36 @@ extern "C" __host__ cudaError_t CUDARTAPI cudaGetDevice(int *device) {
     return CudaRtFrontend::GetExitCode();
 }
 
-extern "C" __host__ cudaError_t CUDARTAPI cudaGetDeviceCount(int *count) {
+//2016.06.18 Sandy
+extern "C" __host__ cudaError_t CUDARTAPI cudaGetDeviceCount(int *count)
+{
+
     CudaRtFrontend::Prepare();
     CudaRtFrontend::AddHostPointerForArguments(count);
     CudaRtFrontend::Execute("cudaGetDeviceCount");
     if(CudaRtFrontend::Success())
         *count = *(CudaRtFrontend::GetOutputHostPointer<int>());
-    return CudaRtFrontend::GetExitCode();	//返回Frontend::mExitCode的值
+    *count = ConfigFile::Get_gpuNum();	//Sandy 2016.03.26  2016.04.14
+    	//return (cudaError_t)(0);
+    return CudaRtFrontend::GetExitCode();
+
 }
 
+//	Sandy 2016.03.24 test04
 extern "C" __host__ cudaError_t CUDARTAPI cudaGetDeviceProperties(cudaDeviceProp *prop, int device) {
-    CudaRtFrontend::Prepare();
+    //CudaRtFrontend::Prepare();
+	int device_set = device;
+	int device_faker = 0;	//假值，用来取代传入的参数device		Sandy 2016.03.24
+	CudaRtFrontend::Prepare_GetDeviceProperties(device_set);	//此函数内部包含了Prepare()函数的功能		Sandy 2016.03.24
     CudaRtFrontend::AddHostPointerForArguments(prop);
-    CudaRtFrontend::AddVariableForArguments(device);
+    CudaRtFrontend::AddVariableForArguments(device_faker);
     CudaRtFrontend::Execute("cudaGetDeviceProperties");
     if(CudaRtFrontend::Success()) {
         memmove(prop, CudaRtFrontend::GetOutputHostPointer<cudaDeviceProp>(),
                 sizeof(cudaDeviceProp));
+
+    CudaRtFrontend::restore_GetDeviceProperties();
+
 #ifndef CUDA_VERSION
 #error CUDA_VERSION not defined
 #endif
@@ -110,11 +123,21 @@ extern "C" __host__ cudaError_t cudaDeviceGetAttribute ( int* value, cudaDeviceA
 
 }
 
+// 2016.06.18 	Sandy
+# define CUDA_SET_DEVICE 1
 extern "C" __host__ cudaError_t CUDARTAPI cudaSetDevice(int device) {
-    CudaRtFrontend::Prepare();
-    CudaRtFrontend::AddVariableForArguments(device);
+
+	//Frontend::GetFrontend()->set_device_choiced(device);
+	int device_set = device;
+	int dev_faker = 0;
+	//return (cudaError_t)(0);
+
+	CudaRtFrontend::Prepare_setDevice(device_set);	//此函数内部包含了Prepare()函数的功能
+    //CudaRtFrontend::Prepare();
+    CudaRtFrontend::AddVariableForArguments(dev_faker);	//替代了参数，原来为device
     CudaRtFrontend::Execute("cudaSetDevice");
     return CudaRtFrontend::GetExitCode();
+
 }
 
 #if CUDART_VERSION >= 3000
