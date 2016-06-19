@@ -44,6 +44,9 @@
 
 using namespace std;
 
+//Sandy
+int ConfigFile::backend_gpu = 1;	//默认只使用一个后端GPU
+
 /*
  * 该函数找到输入字符串中第一个为'#'的字符并且将其设置为'\0'
  */
@@ -131,6 +134,18 @@ ConfigFile::ConfigFile(const char* filename) {
         if(!split(line, &key, &value))
             throw "Invalid entry in config file.";
         mValues.insert(make_pair(string(key), string(value)));
+
+        //Sandy 2016.04.14
+        //用来从配置文件中读出后端GPU的数目，并且复制给静态数据成员backend_gpu
+        if( (strcmp(key,"gvirtus_device_count")) == 0)
+        {
+        	backend_gpu = atoi(value);
+        }
+        if( (strcmp(key,"communicator")) == 0)	//条件如果成立，表明value的内容为“afunix:///tmp/gvirtus:0666”类似的字符串，IP地址包含在内了 Sandy
+        {
+        	mIPaddrs.push_back(value);//Sandy
+        }
+
         free(key);
         free(value);
     }
@@ -155,12 +170,26 @@ bool ConfigFile::HasKey(const std::string& key) const {
     map<string,string>::const_iterator i = mValues.find(tolower(key));
     return i != mValues.end();
 }
-
 const string ConfigFile::Get(const std::string& key) const {
     map<string,string>::const_iterator i = mValues.find(tolower(key));
     if(i == mValues.end())
         throw "Key not found.";
     return i->second;
+}
+/*Sandy 2016.03.11 */
+const string ConfigFile::Get_IPs(const std::string& key,const int index)
+{
+    map<string,string>::iterator i = mValues.find(tolower(key));//mValues中的内容应该是配置文件中的所有的<communicator,tcp://localhost:port>形式
+    if(i == mValues.end())
+    {
+        throw "Key not found.";
+    }
+    return mIPaddrs[index];
+}
+/* Sandy 2016.04.14  */
+int ConfigFile::Get_gpuNum(void)
+{
+	return backend_gpu;
 }
 
 void ConfigFile::Dump() {
